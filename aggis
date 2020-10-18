@@ -56,7 +56,7 @@ if ( @ARGV >= 2 )
         my $n_nets = $ARGV[1];
         usage("2nd parameter not a legal number of nets.")
             if ( ( $n_nets !~ m/^\d+$/ ) || ( int($n_nets) <= 0 ) );
-        my ( $ip, $len ) = &parse_arg($arg1);
+        my ( $ip, $len ) = parse_arg($arg1);
         $ONE_NET = ( 1 << ( 32 - $len ) );
 
         print "\n" unless ($NO_EXTRA_LINES);
@@ -76,11 +76,11 @@ if ( @ARGV >= 2 )
             #
             #  Three parameters:  "IP - <new_last_byte>"
             #
-            my ( $START_ip, $len1 ) = &parse_arg($arg1);
+            ( $START_ip, $len1 ) = parse_arg($arg1);
             $end_arg = $arg1;
             if   ( $end_arg =~ m'/' ) { $end_arg =~ s"\d+\.*/"$arg3/"; }
             else                      { $end_arg =~ s"\d+\.*$"$arg3"; }
-            ( $END_ip, $len ) = &parse_arg($end_arg);
+            ( $END_ip, $len ) = parse_arg($end_arg);
 
         }
         else
@@ -88,8 +88,8 @@ if ( @ARGV >= 2 )
             #
             #  Three parameters:  "IP - IP"
             #
-            ( $START_ip, $len1 ) = &parse_arg($arg1);
-            ( $END_ip,   $len )  = &parse_arg($arg3);
+            ( $START_ip, $len1 ) = parse_arg($arg1);
+            ( $END_ip,   $len )  = parse_arg($arg3);
         }
 
         usage( "Error: the value \"$end_arg\" is lower " . "than \"$arg1\"." )
@@ -205,7 +205,7 @@ exit(0);
 
 sub usage
 {
-    my $msg = shift;
+    my ($msg) = @_;
     printf STDERR "\n%s\n\n", $msg if $msg;
     printf STDERR "usage:  aggis [-flags] ip_prefix[/prefix_length]"
         . "\t(Version $VERSION)\n"
@@ -237,7 +237,7 @@ sub usage
 #
 sub mask_of_len
 {
-    my $len = shift;
+    my ($len) = @_;
     return ( -( 1 << ( 32 - $len ) ) );
 }
 
@@ -246,14 +246,17 @@ sub parse_arg
     #
     #  Parse the Prefix:
     #
-    my $arg = shift;
+    my ($arg) = @_;
     my $len;
 
-    my @bytes                = split( '\.', $arg );
+    my $addr_part            = (split( '/',  $arg))[0];
+    my @bytes                = split( '\.', $addr_part );
     my $lowest_explicit_byte = $#bytes;
 
     for ( my $i = 0; $i < 4; $i++ )
     {
+        $bytes[$i] = 0 unless $bytes[$i];
+
         if (    ( $bytes[$i] < 0 )
              || $bytes[$i] > 255
              || ( defined( $bytes[$i] ) && $bytes[$i] !~ /\d+/ ) )
@@ -334,6 +337,7 @@ sub parse_arg
     #  Handle non-CIDR-aligned blocks:
     #
     my $adjusted_ip = $ip & $mask;
+
     if ( $adjusted_ip != $ip )
     {
         print "-" x 78, "\n";
@@ -364,12 +368,12 @@ sub parse_arg
         print "-" x 78, "\n";
         exit(1);
     }
-    return ( ( $ip, $len ) );
+    return ( $ip, $len );
 }
 
 sub determine_class
 {
-    my $highbyte = shift;
+    my ($highbyte) = @_;
 
     if ( $highbyte < 128 )
     {
