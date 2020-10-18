@@ -35,7 +35,23 @@ use Getopt::Long;
 
 my $VERSION = "3.0";
 
-Getopts('DLTdlqrh') || usage();    # Sets $opt_d if "-d" specified, etc.
+my ($opt_d, $opt_D, $opt_q, $opt_l, $opt_r, $opt_h, $opt_L, $opt_T, $opt_v);
+
+GetOptions("dotted|d",          \$opt_d,
+           "inverted-dotted|D", \$opt_D,
+           "quad|q",            \$opt_q,
+           "list|l",            \$opt_l,
+           "ranges|r",          \$opt_r,
+           "help|h",            \$opt_h,
+           "list-ips|L",        \$opt_L,
+           "trim|T",            \$opt_T,
+           "version|v",         \$opt_v) or usage();
+
+if ($opt_v) {
+    print "aggis version $VERSION\n";
+    exit 0;
+}
+
 usage() if ( @ARGV < 1 || @ARGV > 3 );
 usage() if ($opt_h);    # -h = "help"
 
@@ -44,7 +60,7 @@ my $AGG_LIST_ONLY = $opt_l;    # -l = wants a list of classful aggs
 my $LIST_ONLY = $opt_L || $AGG_LIST_ONLY;	# -L = wants a list of classful nets
 my $HOST_RANGE     = $opt_r;    # -r = "net-range format"
 my $NO_EXTRA_LINES = $opt_T;    # -T = "skip extra blank lines"
-my $arg1 = @ARGV[0];
+my $arg1 = $ARGV[0];
 
 my ($CLASS, $STD_MASKLEN, $ONE_NET);
 #
@@ -375,7 +391,7 @@ sub determine_class {
         $ONE_NET = 0x00000100;
     }
     else {
-        printf "\n  %s specifies a multicast address.  Reject it.\n\n", $arg;
+        printf "\n  %s specifies a multicast address.  Reject it.\n\n", $highbyte;
         exit(1);
     }
 }
