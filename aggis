@@ -35,62 +35,71 @@ use Getopt::Long;
 
 my $VERSION = "3.0";
 
-my ($opt_d, $opt_D, $opt_q, $opt_l, $opt_r, $opt_h, $opt_L, $opt_T, $opt_v);
+my ( $opt_d, $opt_D, $opt_q, $opt_l, $opt_r, $opt_h, $opt_L, $opt_T, $opt_v );
 
-GetOptions("dotted|d",          \$opt_d,
-           "inverted-dotted|D", \$opt_D,
-           "quad|q",            \$opt_q,
-           "list|l",            \$opt_l,
-           "ranges|r",          \$opt_r,
-           "help|h",            \$opt_h,
-           "list-ips|L",        \$opt_L,
-           "trim|T",            \$opt_T,
-           "version|v",         \$opt_v) or usage();
+#<<< skip perltidy formatting
+GetOptions(
+    "dotted|d",          \$opt_d,
+    "inverted-dotted|D", \$opt_D,
+    "quad|q",            \$opt_q,
+    "list|l",            \$opt_l,
+    "ranges|r",          \$opt_r,
+    "help|h",            \$opt_h,
+    "list-ips|L",        \$opt_L,
+    "trim|T",            \$opt_T,
+    "version|v",         \$opt_v
+) or usage();
+#>>>
 
-if ($opt_v) {
+if ($opt_v)
+{
     print "aggis version $VERSION\n";
     exit 0;
 }
 
 usage() if ( @ARGV < 1 || @ARGV > 3 );
-usage() if ($opt_h);    # -h = "help"
+usage() if ($opt_h);                     # -h = "help"
 
-my $DOTTED_QUAD   = $opt_q;    # -q = "dotted.quad format"
-my $AGG_LIST_ONLY = $opt_l;    # -l = wants a list of classful aggs
-my $LIST_ONLY = $opt_L || $AGG_LIST_ONLY;	# -L = wants a list of classful nets
-my $HOST_RANGE     = $opt_r;    # -r = "net-range format"
-my $NO_EXTRA_LINES = $opt_T;    # -T = "skip extra blank lines"
-my $arg1 = $ARGV[0];
+my $DOTTED_QUAD    = $opt_q;                      # -q = "dotted.quad format"
+my $AGG_LIST_ONLY  = $opt_l;                      # -l = wants a list of classful aggs
+my $LIST_ONLY      = $opt_L || $AGG_LIST_ONLY;    # -L = wants a list of classful nets
+my $HOST_RANGE     = $opt_r;                      # -r = "net-range format"
+my $NO_EXTRA_LINES = $opt_T;                      # -T = "skip extra blank lines"
+my $arg1           = $ARGV[0];
 
-my ($CLASS, $STD_MASKLEN, $ONE_NET);
+my ( $CLASS, $STD_MASKLEN, $ONE_NET );
 #
 #  If a 2nd parameter is supplied, its # of nets
 #  If a 3rd parameter is supplied, the syntax is "IP - IP"
 #                                             or "IP - <new_last_byte>"
 #
-if ( @ARGV >= 2 ) {
-    if ( @ARGV == 2 ) {
+if ( @ARGV >= 2 )
+{
+    if ( @ARGV == 2 )
+    {
         #
         # Two parameters:  "IP <# of nets>"
         #
         my $n_nets = $ARGV[1];
         usage("2nd parameter not a legal number of nets.")
-        if ( ( $n_nets !~ m/^\d+$/ ) || ( int($n_nets) <= 0 ) );
+            if ( ( $n_nets !~ m/^\d+$/ ) || ( int($n_nets) <= 0 ) );
         my ( $ip, $len ) = &parse_arg($arg1);
-        $ONE_NET = ( 1 << (32-$len) );
+        $ONE_NET = ( 1 << ( 32 - $len ) );
 
         print "\n" unless ($NO_EXTRA_LINES);
         printf "  %s starting at %s can be represented as:\n\n",
-        class_nets( $ip, $len, $n_nets ), printip( $ip, $len );
-        reagg( $ip, $ip + ($ONE_NET*$n_nets) - 1 );
+            class_nets( $ip, $len, $n_nets ), printip( $ip, $len );
+        reagg( $ip, $ip + ( $ONE_NET * $n_nets ) - 1 );
         exit(0);
-}
-else {   # @ARGV == 3
+    }
+    else
+    {    # @ARGV == 3
         usage() if $ARGV[1] ne "-";
         my $arg3 = $ARGV[2];
         my ( $end_arg, $START_ip, $END_ip, $len, $len1 );
 
-        if ( $arg3 =~ /^\d+$/ ) {
+        if ( $arg3 =~ /^\d+$/ )
+        {
             #
             #  Three parameters:  "IP - <new_last_byte>"
             #
@@ -100,8 +109,9 @@ else {   # @ARGV == 3
             else                      { $end_arg =~ s"\d+\.*$"$arg3"; }
             ( $END_ip, $len ) = &parse_arg($end_arg);
 
-    }
-    else {
+        }
+        else
+        {
             #
             #  Three parameters:  "IP - IP"
             #
@@ -110,20 +120,19 @@ else {   # @ARGV == 3
         }
 
         usage( "Error: the value \"$end_arg\" is lower " . "than \"$arg1\"." )
-          if ( $END_ip < $START_ip );
+            if ( $END_ip < $START_ip );
 
         print "\n" unless ($NO_EXTRA_LINES);
 
         printf "The range of nets from %s to %s can be"
-          . " represented by:\n\n",
-          printip( $START_ip, $len1 ),
-          printagg( $END_ip, $len );
-        $END_ip += ( 1 << (32-$len) )-1;
+            . " represented by:\n\n",
+            printip( $START_ip, $len1 ),
+            printagg( $END_ip, $len );
+        $END_ip += ( 1 << ( 32 - $len ) ) - 1;
         reagg( $START_ip, $END_ip );
         exit(0);
     }
 }
-
 
 #
 #  Ok;  this is a simple one-argument query:  "Translate this thing in
@@ -134,106 +143,112 @@ my $this_agg = printagg( $ip, $len );
 
 my $mask = &mask_of_len($len);
 
-if ($LIST_ONLY) {
+if ($LIST_ONLY)
+{
 
     # Nice feature suggested by Peter Merdian:
     #
     # List out the classful nets one per line (for use in scripts)
     #
     my $n_nets =
-      ( $STD_MASKLEN < $len )
-      ? 0
-      : ( 1 << ( $STD_MASKLEN - $len ) );
-    while ( $n_nets-- ) {
+        ( $STD_MASKLEN < $len )
+        ? 0
+        : ( 1 << ( $STD_MASKLEN - $len ) );
+    while ( $n_nets-- )
+    {
         printf "%s\n",
-        (
-            ($AGG_LIST_ONLY)
-            ? printagg( $ip, $STD_MASKLEN )
-            : printip( $ip, $STD_MASKLEN )
-        );
+            ( ($AGG_LIST_ONLY)
+              ? printagg( $ip, $STD_MASKLEN )
+              : printip( $ip, $STD_MASKLEN )
+            );
         $ip += $ONE_NET;
     }
 
     exit(0);
 }
 
-
-if ( $len == 0 ) {
+if ( $len == 0 )
+{
     printf "\n  0/0 specifies \"default\".\n\n";
 }
-elsif ( $len == 32 ) {
+elsif ( $len == 32 )
+{
     printf "\n  %s is the address of one host.\n\n", $this_agg;
 }
-elsif ( $len == $STD_MASKLEN ) {
-  printf "\n  %s is equivalent to Class $CLASS network %s\n\n",$this_agg, &printip( $ip, $STD_MASKLEN );
+elsif ( $len == $STD_MASKLEN )
+{
+    printf "\n  %s is equivalent to Class $CLASS network %s\n\n", $this_agg,
+        &printip( $ip, $STD_MASKLEN );
 }
-elsif ( $len > $STD_MASKLEN ) {
+elsif ( $len > $STD_MASKLEN )
+{
     #
     #  Subnet of Class X.   (format for 1 or two lines).
     #
-    my $fraction = ( 1 << ( $len - $STD_MASKLEN ));
-    my $head_of_line = sprintf(
-        "\n  %s is a subnet representing 1/%d of " . "Class ${CLASS} network",
-        $this_agg, $fraction );
+    my $fraction = ( 1 << ( $len - $STD_MASKLEN ) );
+    my $head_of_line =
+        sprintf( "\n  %s is a subnet representing 1/%d of " . "Class ${CLASS} network",
+                 $this_agg, $fraction );
 
-    my $ip_string = printip( ( $ip & &mask_of_len($STD_MASKLEN) ), $STD_MASKLEN );
+    my $ip_string =
+        printip( ( $ip & &mask_of_len($STD_MASKLEN) ), $STD_MASKLEN );
 
     my $prev_linelen;
-    if ((length($head_of_line) + length($ip_string)) < 78 ) {
-        my $line = sprintf("%s %s", $head_of_line, $ip_string );
-        print $line,"\n\n";
+    if ( ( length($head_of_line) + length($ip_string) ) < 78 )
+    {
+        my $line = sprintf( "%s %s", $head_of_line, $ip_string );
+        print $line, "\n\n";
         $prev_linelen = length($line);
     }
-    else {
+    else
+    {
         printf( "%s\n%s%s\n\n",
-            $head_of_line, " " x ( 76 - length($ip_string) ), $ip_string );
+                $head_of_line, " " x ( 76 - length($ip_string) ), $ip_string );
         $prev_linelen = 77;
     }
 
-    my $line = sprintf(
-        "Address Range %s - %s",
-        &printip( $ip,                              32 ),
-        &printip( $ip + ( 1 << ( 32 - $len ) ) - 1, 32 )
-    );
-    print " " x ($prev_linelen - length($line) - 1), $line, "\n";
+    my $line = sprintf( "Address Range %s - %s",
+                &printip( $ip, 32 ), &printip( $ip + ( 1 << ( 32 - $len ) ) - 1, 32 ) );
+    print " " x ( $prev_linelen - length($line) - 1 ), $line, "\n";
 }
-else {
+else
+{
     #
     #  Aggregate equivalent to N Class X's.  (2 aligned lines).
     #
-    my $n_nets = ( 1 << ( $STD_MASKLEN - $len ));
-    my $end_ip  = $ip + ( ($n_nets-1) * $ONE_NET );
+    my $n_nets = ( 1 << ( $STD_MASKLEN - $len ) );
+    my $end_ip = $ip + ( ( $n_nets - 1 ) * $ONE_NET );
     my $head_of_line =
-      sprintf( "  %s is an aggregate equivalent to %d Class ${CLASS}s:",
-        printagg( $ip, $len ), $n_nets );
+        sprintf( "  %s is an aggregate equivalent to %d Class ${CLASS}s:",
+                 printagg( $ip, $len ), $n_nets );
     printf "\n%s  %s\n%sto  %s\n", $head_of_line,
-      printip( $ip, $STD_MASKLEN ), " " x ( length($head_of_line) - 2 ),
-      printip( $end_ip, $STD_MASKLEN );
+        printip( $ip, $STD_MASKLEN ), " " x ( length($head_of_line) - 2 ),
+        printip( $end_ip, $STD_MASKLEN );
 }
 
 exit(0);
 
 #------------------------------- subroutines ----------------------------
 
-
-sub usage {
+sub usage
+{
     my $msg = shift;
     printf STDERR "\n%s\n\n", $msg if $msg;
     printf STDERR "usage:  aggis [-flags] ip_prefix[/prefix_length]"
-      . "\t(Version $VERSION)\n"
-      . "   or:  aggis [-flags] aggregate #_of_nets\n"
-      . "   or:  aggis [-flags] aggregate - aggregate\n"
-      . "             e.g.  aggis 141.212 - 141.214 \n"
-      . "   or:  aggis [-flags] aggregate - <end_last_byte_value>\n"
-      . "             e.g.  aggis 141.212/18 - 216 \n" . "\n"
-      . "           flag -d: \"include dotted decimal masks\"\n"
-      . "           flag -D: \"include inverted dotted decimal masks\"\n"
-      . "           flag -r: always use \"host ranges\" for expansions.\n"
-      . "           flag -q: always use \"dotted.quad\" format\n"
-      . "           flag -l: expand into a list of classful ip/lens\n"
-      . "           flag -L: expand into a list of classful ip's only\n"
-      . "           flag -T: trim extra blank lines on expansions\n"
-      . "           flag -h: print this \"help\".\n";
+        . "\t(Version $VERSION)\n"
+        . "   or:  aggis [-flags] aggregate #_of_nets\n"
+        . "   or:  aggis [-flags] aggregate - aggregate\n"
+        . "             e.g.  aggis 141.212 - 141.214 \n"
+        . "   or:  aggis [-flags] aggregate - <end_last_byte_value>\n"
+        . "             e.g.  aggis 141.212/18 - 216 \n" . "\n"
+        . "           flag -d: \"include dotted decimal masks\"\n"
+        . "           flag -D: \"include inverted dotted decimal masks\"\n"
+        . "           flag -r: always use \"host ranges\" for expansions.\n"
+        . "           flag -q: always use \"dotted.quad\" format\n"
+        . "           flag -l: expand into a list of classful ip/lens\n"
+        . "           flag -L: expand into a list of classful ip's only\n"
+        . "           flag -T: trim extra blank lines on expansions\n"
+        . "           flag -h: print this \"help\".\n";
     exit(1);
 }
 
@@ -247,26 +262,29 @@ sub usage {
 #      1 << $len = 0x01000000
 #      negative of that = 0xff000000
 #
-sub mask_of_len {
+sub mask_of_len
+{
     my $len = shift;
-    return(-( 1 << (32 - $len )));
+    return ( -( 1 << ( 32 - $len ) ) );
 }
 
-
-sub parse_arg {
+sub parse_arg
+{
     #
     #  Parse the Prefix:
     #
     my $arg = shift;
     my $len;
 
-    my @bytes = split( '\.', $arg );
+    my @bytes                = split( '\.', $arg );
     my $lowest_explicit_byte = $#bytes;
 
-    for (my $i=0; $i<4 ; $i++ ) {
-        if ( ($bytes[$i] < 0 )
-            || $bytes[$i] > 255
-            ||(defined($bytes[$i]) && $bytes[$i] !~ /\d+/) ) {
+    for ( my $i = 0; $i < 4; $i++ )
+    {
+        if (    ( $bytes[$i] < 0 )
+             || $bytes[$i] > 255
+             || ( defined( $bytes[$i] ) && $bytes[$i] !~ /\d+/ ) )
+        {
             printf "Illegal byte value %s\n", $bytes[$i];
             exit;
         }
@@ -276,10 +294,10 @@ sub parse_arg {
     }
 
     my $ip =
-      ( $bytes[0] * 16777216 ) +
-      ( $bytes[1] * 65536 ) +
-      ( $bytes[2] * 256 ) +
-      $bytes[3];
+          ( $bytes[0] * 16777216 )
+        + ( $bytes[1] * 65536 )
+        + ( $bytes[2] * 256 )
+        + $bytes[3];
 
     #
     #  Set global parameters:  $CLASS, $STD_MASKLEN, $ONE_NET
@@ -291,18 +309,20 @@ sub parse_arg {
     #  Parse the 1st parameter for a "/length".
     #  Supply a classful default length ONLY if no length was specified.
     #
-    my @F = split( '/', $arg );
+    my @F            = split( '/', $arg );
     my $length_given = ( @F == 2 );
 
-    if ($length_given) {   # Was an /pfxlen given?
+    if ($length_given)
+    {    # Was an /pfxlen given?
         $len = $F[1];
     }
-    else {
+    else
+    {
         #  Old version:  user the classful default lengths.
         #
-        $len = ( $bytes[0] < 128 ) ? 8  : # No explicit length given.
-          ( $bytes[0] < 192 ) ? 16 : # Default to classful defn.
-          24;
+        $len = ( $bytes[0] < 128 ) ? 8 :    # No explicit length given.
+            ( $bytes[0] < 192 ) ? 16 :      # Default to classful defn.
+            24;
         #
         #  *IF* this default causes a CIDR-alignment problem,
         #    then that's probably not what they wanted.  Try
@@ -318,18 +338,19 @@ sub parse_arg {
         #  ways of using IP notation.
 
         my $mask = mask_of_len($len);
-        $len =  (8,16,24,32)[$lowest_explicit_byte]
-          if ( ($mask & $ip) != $ip );
+        $len = ( 8, 16, 24, 32 )[$lowest_explicit_byte]
+            if ( ( $mask & $ip ) != $ip );
     }
 
     #
     #  Handle illegal specified lengths:
     #
-    if ( ( $len > 32 ) || ( $len < 0 )) {
+    if ( ( $len > 32 ) || ( $len < 0 ) )
+    {
         print "-" x 78, "\n";
         printf
-          qq|Error:  "/length" must be between 0 and 32 (not %d).\n|,
-        $len;
+            qq|Error:  "/length" must be between 0 and 32 (not %d).\n|,
+            $len;
 
         print "-" x 78, "\n";
         exit(1);
@@ -340,73 +361,86 @@ sub parse_arg {
     #  Handle non-CIDR-aligned blocks:
     #
     my $adjusted_ip = $ip & $mask;
-    if ( $adjusted_ip != $ip ) {
+    if ( $adjusted_ip != $ip )
+    {
         print "-" x 78, "\n";
 
         printf "Error:  The aggregate \"%s\" is invalid.  "
-          . "(There are bits in \"%s\"\n"
-          . "        outside of mask \"%s\" ).\n", printagg( $ip, $len ),
-          printip( $ip, $len ), printip( $mask, 32 );
+            . "(There are bits in \"%s\"\n"
+            . "        outside of mask \"%s\" ).\n", printagg( $ip, $len ),
+            printip( $ip, $len ), printip( $mask, 32 );
 
         my $count;
-        for ( $count=0, my $bits=$ip ; $bits ; $bits <<= 1 ) { $count++; }
+        for ( $count = 0, my $bits = $ip; $bits; $bits <<= 1 ) { $count++; }
 
         printf "\n        The largest aggregate (smallest prefix length) "
-          . "using the\n"
-          . "        prefix \"%s\" is:\n\n", printip( $ip, $len ),
-          printagg( $ip, $count );
+            . "using the\n"
+            . "        prefix \"%s\" is:\n\n", printip( $ip, $len ),
+            printagg( $ip, $count );
 
         expand_1_agg( $ip, $count );
 
         printf "\n        The \"*/%d\" aggregate containing \"%s\" "
-          . "is:\n\n",
-          $len,
-          printip( $ip, $len ),
-          printagg( $adjusted_ip, $len );
+            . "is:\n\n",
+            $len,
+            printip( $ip, $len ),
+            printagg( $adjusted_ip, $len );
 
         expand_1_agg( $adjusted_ip, $len );
 
         print "-" x 78, "\n";
         exit(1);
     }
-    return( ( $ip, $len ) );
+    return ( ( $ip, $len ) );
 }
 
-sub determine_class {
+sub determine_class
+{
     my $highbyte = shift;
 
-    if ( $highbyte < 128 ) {
-        $CLASS = 'A';
+    if ( $highbyte < 128 )
+    {
+        $CLASS       = 'A';
         $STD_MASKLEN = 8;
-        $ONE_NET = 0x01000000;
+        $ONE_NET     = 0x01000000;
     }
-    elsif ( $highbyte < 192 ) {
-        $CLASS = 'B';
+    elsif ( $highbyte < 192 )
+    {
+        $CLASS       = 'B';
         $STD_MASKLEN = 16;
-        $ONE_NET = 0x00010000;
+        $ONE_NET     = 0x00010000;
     }
-    elsif ( $highbyte < 224 ) {
-        $CLASS = 'C';
+    elsif ( $highbyte < 224 )
+    {
+        $CLASS       = 'C';
         $STD_MASKLEN = 24;
-        $ONE_NET = 0x00000100;
+        $ONE_NET     = 0x00000100;
     }
-    else {
+    else
+    {
         printf "\n  %s specifies a multicast address.  Reject it.\n\n", $highbyte;
         exit(1);
     }
 }
 
-sub printagg {
-    my ($ip, $len) = @_;
+sub printagg
+{
+    my ( $ip, $len ) = @_;
 
-    return(
-        ($opt_d) ? sprintf("%s/%d(%s)",&printip($ip,$len),$len,&printip(&mask_of_len($len)))
-          :($opt_D) ? sprintf("%s/%d(%s)",&printip($ip,$len),$len,&printip(~&mask_of_len($len)))
-          :sprintf("%s/%d", &printip($ip,$len), $len ));
+    return ( ($opt_d)
+             ? sprintf( "%s/%d(%s)",
+                        &printip( $ip, $len ),
+                        $len, &printip( &mask_of_len($len) ) )
+             : ($opt_D) ? sprintf( "%s/%d(%s)",
+                                   &printip( $ip, $len ),
+                                   $len, &printip( ~&mask_of_len($len) ) )
+             : sprintf( "%s/%d", &printip( $ip, $len ), $len )
+    );
 }
 
-sub printip {
-    my ($ip, $len) = @_;
+sub printip
+{
+    my ( $ip, $len ) = @_;
     my $s;
 
     my $byte0 = ( $ip >> 24 ) & 0x000000ff;
@@ -414,17 +448,21 @@ sub printip {
     my $byte2 = ( $ip & 0x0000ff00 ) >> 8;
     my $byte3 = ( $ip & 0x000000ff );
 
-    if ( ($byte3) || $len > 24 || $DOTTED_QUAD ) {
+    if ( ($byte3) || $len > 24 || $DOTTED_QUAD )
+    {
         $s = sprintf( "%d.%d.%d.%d", $byte0, $byte1, $byte2, $byte3 );
     }
-    elsif ( ($byte2) || $len > 16 ) {
-        $s=sprintf("%d.%d.%d", $byte0, $byte1, $byte2 );
+    elsif ( ($byte2) || $len > 16 )
+    {
+        $s = sprintf( "%d.%d.%d", $byte0, $byte1, $byte2 );
     }
-    elsif ( ($byte1) || $len > 8 ) {
-        $s=sprintf("%d.%d", $byte0, $byte1 );
+    elsif ( ($byte1) || $len > 8 )
+    {
+        $s = sprintf( "%d.%d", $byte0, $byte1 );
     }
-    else {
-       $s = sprintf( "%d", $byte0 );
+    else
+    {
+        $s = sprintf( "%d", $byte0 );
     }
 
     return $s;
@@ -433,11 +471,11 @@ sub printip {
 #
 #  Tell what aggregates would be necessary to represent this.
 #
-sub reagg {
-    my($start_ip, $end_ip) = @_;
+sub reagg
+{
+    my ( $start_ip, $end_ip ) = @_;
 
-    do { $start_ip = print_part( $start_ip, $end_ip ); }
-      while ( $start_ip <= $end_ip );
+    do { $start_ip = print_part( $start_ip, $end_ip ); } while ( $start_ip <= $end_ip );
 
     print "\n" unless ($NO_EXTRA_LINES);
 }
@@ -445,8 +483,9 @@ sub reagg {
 #
 #  (Used only by reagg):  determine & print one of the reaggregation aggregates.
 #
-sub print_part {
-    my ($start, $end) = @_;
+sub print_part
+{
+    my ( $start, $end ) = @_;
     my $pwr;
     exit(0) if ( ! ~$start );    # 0xffffffff;  255.255.255.255
 
@@ -457,15 +496,17 @@ sub print_part {
     #   OR when the resulting aggregate no longer starts at the
     #   start address (e.g. it has bits beyond the masklen).
     #
-    for ( $pwr=1 ; $pwr <= 32 ; $pwr++ ) {
+    for ( $pwr = 1; $pwr <= 32; $pwr++ )
+    {
         my $pwr2     = 1 << $pwr;
         my $this_end = $start + $pwr2 - 1;
         my $pwr2mask = -$pwr2;               # 0x00010000 -> 0xffff0000
 
-        if (  ( $this_end > $end )
-            ||($start != ( $start & $pwr2mask ))) {
-            &expand_1_agg( $start, 33-$pwr );
-            return( $start + $pwr2/2 );
+        if (    ( $this_end > $end )
+             || ( $start != ( $start & $pwr2mask ) ) )
+        {
+            &expand_1_agg( $start, 33 - $pwr );
+            return ( $start + $pwr2 / 2 );
         }
     }
 
@@ -479,59 +520,68 @@ sub print_part {
 #		 35/8  (  1 net:   35 )
 #        or: 	 36/7  (  2 nets:  36 - 37 )
 #
-sub expand_1_agg {
-    my ($ip, $len) = @_;
+sub expand_1_agg
+{
+    my ( $ip, $len ) = @_;
     my $n_nets;
 
-    if ( $len >= 32 && !$HOST_RANGE) {
+    if ( $len >= 32 && !$HOST_RANGE )
+    {
         #
         #  35.1.1.1/32 is the address of one host.
         #  ---------------------------------------
         printf "     %16s  (  1 host:  %s )\n", &printagg( $ip, $len ),
-          &printip( $ip, 32 );
+            &printip( $ip, 32 );
     }
-    elsif ( ( $len > $STD_MASKLEN ) || $HOST_RANGE ) {
+    elsif ( ( $len > $STD_MASKLEN ) || $HOST_RANGE )
+    {
         #
         #   35.1.4/23  ( hosts:  35.1.4.0 - 35.1.5.255 )
         #   --------------------------------------------
         printf "     %16s  (%3d hosts: %s - %s )\n", &printagg( $ip, $len ),
-          1 << ( 32 - $len ), &printip( $ip, 32 ),
-          &printip( $ip + ( 1 << ( 32 - $len ) ) - 1, 32 );
+            1 << ( 32 - $len ), &printip( $ip, 32 ),
+            &printip( $ip + ( 1 << ( 32 - $len ) ) - 1, 32 );
     }
-    elsif ( $len == $STD_MASKLEN ) {
+    elsif ( $len == $STD_MASKLEN )
+    {
         #
         #       35/8  (  1 net:   35 )
         #       ----------------------
         printf "     %16s  (  1 net:   %s )\n", &printagg( $ip, $len ),
-          &printip( $ip, $STD_MASKLEN );
+            &printip( $ip, $STD_MASKLEN );
     }
-    else {
+    else
+    {
         #
         #       36/6  (  4 nets:  36 - 39 )
         #       ---------------------------
         $n_nets = 2**( $STD_MASKLEN - $len );
         printf "     %16s  (%3d nets:  %s - %s )\n", &printagg( $ip, $len ),
-          $n_nets, &printip( $ip, $STD_MASKLEN ),
-          &printip( $ip + ( $ONE_NET * ( $n_nets - 1 ) ), $STD_MASKLEN );
+            $n_nets, &printip( $ip, $STD_MASKLEN ),
+            &printip( $ip + ( $ONE_NET * ( $n_nets - 1 ) ), $STD_MASKLEN );
     }
 }
 
-sub class_nets {
-    my ($ip, $len, $nbr) = @_;
-    my ($nets_str, $class);
+sub class_nets
+{
+    my ( $ip, $len, $nbr ) = @_;
+    my ( $nets_str, $class );
 
     $nets_str = ( $nbr > 1 ) ? "nets" : "net";
 
-    if ( $ip > 0xc0000000 ) {
+    if ( $ip > 0xc0000000 )
+    {
         $class = ( $len == 24 ) ? "Class C" : "\"\*/$len\"";
-        return( sprintf("%d $class $nets_str", $nbr ));
-}
-elsif ( $ip > 0x80000000 ) {
-    $class = ( $len == 16 ) ? "Class B" : "\"\*/$len\"";
-        return( sprintf("%d $class $nets_str", $nbr ));
-}
-else {
-    $class = ( $len == 8 ) ? "Class A" : "\"\*/$len\"";
-        return( sprintf("%d $class $nets_str", $nbr ));
+        return ( sprintf( "%d $class $nets_str", $nbr ) );
+    }
+    elsif ( $ip > 0x80000000 )
+    {
+        $class = ( $len == 16 ) ? "Class B" : "\"\*/$len\"";
+        return ( sprintf( "%d $class $nets_str", $nbr ) );
+    }
+    else
+    {
+        $class = ( $len == 8 ) ? "Class A" : "\"\*/$len\"";
+        return ( sprintf( "%d $class $nets_str", $nbr ) );
     }
 }
