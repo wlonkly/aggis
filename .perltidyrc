@@ -1,0 +1,19 @@
+-se    # errors to standard error output
+-w     # show all warnings
+-bl    # braces on new lines
+-l=88  # 88-char lines, after black
+-i=4   # indent by 4 spaces
+-ci=4   # Continuation indent is 4 cols
+-se     # Errors to STDERR
+-lp     # line up parens
+-vt=2   # Maximal vertical tightness
+-cti=0  # No extra indentation for closing brackets
+-pt=1   # Medium parenthesis tightness
+-bt=1   # Medium brace tightness
+-sbt=1  # Medium square bracket tightness
+-bbt=1  # Medium block brace tightness
+-nsfs   # No space before semicolons
+-nolq   # Don't outdent long quoted strings
+-wbb="% + - * / x != == >= <= =~ < > | & **= += *= &= <<= &&= -= /= |= >>= ||= .= %= ^= x="
+  # Break before all operators
+
