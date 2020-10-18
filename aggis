@@ -2,33 +2,6 @@
 #
 #  aggis - describe what the given aggregate means.
 #
-#	usage:  aggis [-d|-D] ip_prefix[/prefix_length]
-#	   or:  aggis [-d|-D] aggregate #_of_nets
-#          or:  aggis [-flags] aggregate - aggregate\n" .
-#                    e.g.  aggis 141.212 - 141.214 \n" .
-#	   or:  aggis [-d|-D] aggregate - <end_last_byte_of_prefix_value>
-#	             e.g.  aggis 141.212/18 - 216
-#
-#	       flag -d: "include dotted decimal masks"
-#	       flag -D: "include inverted dotted decimal masks"
-#	       flag -q: always use "dotted.quad" format
-#	       flag -l: expand only into a list of classful nets.
-#              flag -r: always use "host ranges" for expansions.
-#              flag -h: print this "help"
-#	       flag -l: expand into a list of classful ip/lens\n" .
-#	       flag -L: expand into a list of classful ip's only\n" .
-#              flag -T: trim extra blank lines
-#
-# Dale Johnson, Merit (dsj@merit.edu)
-# & Tony Bates, RIPE  (Tony.Bates@ripe.net)
-#
-#  This program and the accompanying man page were originally
-#  available from:
-#  	 merit.edu:pub/nsfnet/cidr/aggis and aggis.l .
-#
-# Ported to Perl 5 by Rich Lafferty (rich@lafferty.ca),
-# starting with $Id: aggis,v 2.7 1994/11/18 20:44:11 dsj Exp $
-#
 use strict;
 use warnings;
 use Getopt::Long;
@@ -585,3 +558,102 @@ sub class_nets
         return ( sprintf( "%d $class $nets_str", $nbr ) );
     }
 }
+
+__END__
+
+=head1 NAME
+
+aggis - describe what the given aggregate means
+
+=head1 USAGE
+
+    aggis [OPTIONS] ip_prefix[/prefix_length]
+    aggis [OPTIONS] aggregate #_of_nets
+    aggis [OPTIONS] aggregate - aggregate
+    aggis [OPTIONS] aggregate last_byte_of_prefix_value
+    aggis -h
+    aggis -v
+
+=head1 DESCRIPTION
+
+Aggis is an IP range calculator which focuses on manipulating aggregates.
+
+=head1 OPTIONS
+
+=over 5
+
+=item B<-d, --dotted>
+
+Include dotted-decimal masks.
+
+=item B<-D, --inverted-dotted>
+
+Include inverted dotted decimal masks.
+
+=item B<-q, --quad>
+
+Always use dotted quad format.
+
+=item B<-l, --list>
+
+Expand only into a list of classful nets.
+
+=item B<-r, --ranges>
+
+Always use "host ranges" for expansions.
+
+=item B<-L, --list-ips>
+
+Expand into a list of classful ips only.
+
+=item B<-v, --version>
+
+Output aggis version.
+
+=item B<-h, --help>
+
+Display a synopsis of command options.
+
+=back
+
+=head1 EXAMPLES
+
+    $ aggis 141.212 - 141.214
+    The range of nets from 141.212 to 141.214/16 can be represented by:
+
+            141.212/15  (  2 nets:  141.212 - 141.213 )
+            141.214/16  (  1 net:   141.214 )
+    $ aggis 141.212/18 - 216
+    The range of nets from 141.212.0 to 141.216.0/18 can be represented by:
+
+            141.212/14  (  4 nets:  141.212 - 141.215 )
+            141.216.0/18  (16384 hosts: 141.216.0.0 - 141.216.63.255 )
+    $ aggis 141.212/18
+        141.212.0/18 is a subnet representing 1/4 of Class B network 141.212
+
+                                Address Range 141.212.0.0 - 141.212.63.255
+
+=head1 HISTORY
+
+This version of aggis was ported to Perl 5 from the most recent version
+discoverable on Google, RCS version 2.7 from 1994/11/18, committed by
+Dale Johnson.
+
+In oldten times, aggis was available from merit.edu:pub/nsfnet/cidr/aggis,
+which was long gone by the time of the Perl 5 port. There was, apparently,
+a manual page, but it appears to be lost to the ages.
+
+At the time, it was possible to run Aggis through Merit's whois server:
+
+    whois -h prdb.merit.edu 'aggis 141.208.32/21'
+
+but that host is also long gone.
+
+=head1 AUTHORS
+
+Aggis was written by Dale Johnson, Merit (dsj@merit.edu)
+& Tony Bates, RIPE (Tony.Bates@ripe.net).
+
+Perl 5 port by Rich Lafferty (rich@lafferty.ca).
+
+=cut
