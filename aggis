@@ -7,7 +7,7 @@
 #          or:  aggis [-flags] aggregate - aggregate\n" .
 #                    e.g.  aggis 141.212 - 141.214 \n" .
 #	   or:  aggis [-d|-D] aggregate - <end_last_byte_of_prefix_value>
-#	             e.g.  aggis 141.212/18 - 216 
+#	             e.g.  aggis 141.212/18 - 216
 #
 #	       flag -d: "include dotted decimal masks"
 #	       flag -D: "include inverted dotted decimal masks"
@@ -19,30 +19,34 @@
 #	       flag -L: expand into a list of classful ip's only\n" .
 #              flag -T: trim extra blank lines
 #
-# Dale Johnson, Merit (dsj@merit.edu) 
+# Dale Johnson, Merit (dsj@merit.edu)
 # & Tony Bates, RIPE  (Tony.Bates@ripe.net)
 #
-#  This program and the accompanying man page are available from:
-#  	merit.edu:pub/nsfnet/cidr/aggis and aggis.l .
+#  This program and the accompanying man page were originally
+#  available from:
+#  	 merit.edu:pub/nsfnet/cidr/aggis and aggis.l .
 #
-# $Id: aggis,v 2.7 1994/11/18 20:44:11 dsj Exp $
+# Ported to Perl 5 by Rich Lafferty (rich@lafferty.ca),
+# starting with $Id: aggis,v 2.7 1994/11/18 20:44:11 dsj Exp $
 #
-require "getopts.pl";
+use strict;
+use warnings;
+use Getopt::Long;
 
-&Getopts('DLTdlqrh') || &usage ; 	# Sets $opt_d if "-d" specified, etc.
-&usage if ( @ARGV < 1 || @ARGV > 3 );
-&usage if ( $opt_h );			# -h = "help"
+Getopts('DLTdlqrh') || usage ; 	# Sets $opt_d if "-d" specified, etc.
+usage if ( @ARGV < 1 || @ARGV > 3 );
+usage if ( $opt_h );			# -h = "help"
 
-$DOTTED_QUAD = $opt_q ;			# -q = "dotted.quad format"
-$AGG_LIST_ONLY = $opt_l ;		# -l = wants a list of classful aggs
-$LIST_ONLY = $opt_L || $AGG_LIST_ONLY;	# -L = wants a list of classful nets
-$HOST_RANGE = $opt_r   ;		# -r = "net-range format"
-$NO_EXTRA_LINES = $opt_T   ;		# -T = "skip extra blank lines"
-					#       (used by nets.nag)
-$arg1 = @ARGV[0];
+my $DOTTED_QUAD = $opt_q ;			# -q = "dotted.quad format"
+my $AGG_LIST_ONLY = $opt_l ;		# -l = wants a list of classful aggs
+my $LIST_ONLY = $opt_L || $AGG_LIST_ONLY;	# -L = wants a list of classful nets
+my $HOST_RANGE = $opt_r   ;		# -r = "net-range format"
+my $NO_EXTRA_LINES = $opt_T   ;		# -T = "skip extra blank lines"
+my $arg1 = @ARGV[0];
+
 #
 #  If a 2nd parameter is supplied, its # of nets
-#  If a 3nd parameter is supplied, the syntax is "IP - IP" 
+#  If a 3rd parameter is supplied, the syntax is "IP - IP"
 #                                             or "IP - <new_last_byte>"
 #
 if ( @ARGV >= 2 )
@@ -52,36 +56,37 @@ if ( @ARGV >= 2 )
 		#
 		#  Two parameters:  "IP <# of nets>"
 		#
-		$n_nets = $ARGV[1] ;
-		&usage("2nd parameter not a legal number of nets.") 
+		my $n_nets = $ARGV[1] ;
+		usage("2nd parameter not a legal number of nets.")
 			if ( ($n_nets !~ m/^\d+$/) || (int( $n_nets ) <= 0 ));
-		($ip, $len ) = &parse_arg( $arg1 );
-		$one_net = ( 1 << (32-$len) );
+		my ($ip, $len ) = &parse_arg( $arg1 );
+		my $one_net = ( 1 << (32-$len) );
 
 		print "\n" unless ($NO_EXTRA_LINES);
-		printf "  %s starting at %s can be represented as:\n\n", 
-			&class_nets( $ip, $len, $n_nets),
-			&printip( $ip, $len );
-		&reagg( $ip, $ip + ($one_net*$n_nets) - 1 );
+		printf "  %s starting at %s can be represented as:\n\n",
+			class_nets( $ip, $len, $n_nets),
+			printip( $ip, $len );
+		reagg( $ip, $ip + ($one_net*$n_nets) - 1 );
 		exit(0);
 		}
-	else    # @ARGV == 3 
+	else    # @ARGV == 3
 		{
-		&usage if $ARGV[1] ne "-";
-		$arg3 = $ARGV[2];
+		usage if $ARGV[1] ne "-";
+		my $arg3 = $ARGV[2];
+		my $end_arg;
 
 		if ( $arg3 =~ /^\d+$/ )
 			{
 			#
 			#  Three parameters:  "IP - <new_last_byte>"
 			#
-			( $START_ip, $len1 ) = &parse_arg( $arg1 );
+			my ( $START_ip, $len1 ) = &parse_arg( $arg1 );
 			$end_arg = $arg1 ;
 			if ( $end_arg =~ m'/' )
 				{ $end_arg =~ s"\d+\.*/"$arg3/" ; }
-			else 	 
+			else
 				{ $end_arg =~ s"\d+\.*$"$arg3" ; }
-			( $END_ip, $len ) = &parse_arg( $end_arg );
+			my ( $END_ip, $len ) = &parse_arg( $end_arg );
 
 			}
 		else
@@ -89,21 +94,21 @@ if ( @ARGV >= 2 )
 			#
 			#  Three parameters:  "IP - IP"
 			#
-			( $START_ip, $len1) = &parse_arg( $arg1 );
-			( $END_ip,   $len ) = &parse_arg( $arg3 );
+			my ( $START_ip, $len1) = &parse_arg( $arg1 );
+			my ( $END_ip,   $len ) = &parse_arg( $arg3 );
 			}
 
-		&usage("Error: the value \"$end_arg\" is lower " .
+		usage("Error: the value \"$end_arg\" is lower " .
 			 "than \"$arg1\".") if( $END_ip < $START_ip );
 
 		print "\n" unless ($NO_EXTRA_LINES);
 
 		printf "The range of nets from %s to %s can be" .
 		       " represented by:\n\n",
-			&printip( $START_ip, $len1 ),
-			&printagg( $END_ip, $len );
+			printip( $START_ip, $len1 ),
+			printagg( $END_ip, $len );
 		$END_ip += ( 1 << (32-$len) )-1;
-		&reagg( $START_ip, $END_ip );
+		reagg( $START_ip, $END_ip );
 		exit(0);
 		}
 	}
@@ -125,11 +130,11 @@ if ( $LIST_ONLY )
 	#
 	# List out the classful nets one per line (for use in scripts)
 	#
-	$n_nets = ( $std_masklen < $len ) ? 0 : 
+	$n_nets = ( $std_masklen < $len ) ? 0 :
 					   ( 1 << ( $std_masklen - $len ));
 	while ( $n_nets-- )
 		{
-		printf "%s\n", 
+		printf "%s\n",
 			(($AGG_LIST_ONLY) ? &printagg( $ip, $std_masklen ):
 					    &printip( $ip, $std_masklen ));
 		$ip += $one_net ;
@@ -147,9 +152,9 @@ elsif ( $len == 32 )
 	{
 	printf "\n  %s is the address of one host.\n\n", $this_agg;
 	}
-elsif ( $len == $std_masklen ) 
+elsif ( $len == $std_masklen )
 	{
-	printf "\n  %s is equivalent to Class $CLASS network %s\n\n", 
+	printf "\n  %s is equivalent to Class $CLASS network %s\n\n",
 			$this_agg, &printip( $ip, $std_masklen );
 	}
 elsif ( $len > $std_masklen )
@@ -158,10 +163,10 @@ elsif ( $len > $std_masklen )
 	#  Subnet of Class X.   (format for 1 or two lines).
 	#
 	$fraction = ( 1 << ( $len - $std_masklen ));
-	$head_of_line = sprintf("\n  %s is a subnet representing 1/%d of " . 
+	$head_of_line = sprintf("\n  %s is a subnet representing 1/%d of " .
 					    "Class ${CLASS} network",
 		$this_agg, $fraction);
-	$ip_string = &printip( ($ip & &mask_of_len($std_masklen)), 
+	$ip_string = &printip( ($ip & &mask_of_len($std_masklen)),
 							     $std_masklen );
 	if ((length($head_of_line) + length($ip_string )) < 78 )
 		{
@@ -171,13 +176,13 @@ elsif ( $len > $std_masklen )
 		}
 	else
 		{
-		printf("%s\n%s%s\n\n", $head_of_line, 
+		printf("%s\n%s%s\n\n", $head_of_line,
 			" " x ( 76 - length( $ip_string )),
 			$ip_string);
 		$prev_linelen = 77 ;
 		}
 
-	$line = sprintf("Address Range %s - %s", 
+	$line = sprintf("Address Range %s - %s",
 			&printip( $ip, 32 ),
 			&printip( $ip + ( 1 << (32-$len) )-1 , 32 ));
 	print " " x ($prev_linelen - length($line) - 1), $line, "\n";
@@ -200,7 +205,7 @@ else
 	}
 
 exit(0);
-			
+
 #------------------------------- subroutines ----------------------------
 
 sub usage
@@ -208,7 +213,7 @@ sub usage
 	local( $msg ) = @_ ;
 	$Rev = (split(' ', '$Revision: 2.7 $'))[1];	# grab RCSID string
 	printf STDERR "\n%s\n\n", $msg if ($msg);
-	printf STDERR 
+	printf STDERR
 	      "usage:  aggis [-flags] ip_prefix[/prefix_length]" .
 						"\t(Version $Rev)\n" .
 	      "   or:  aggis [-flags] aggregate #_of_nets\n" .
@@ -258,7 +263,7 @@ sub parse_arg
 
 	for ($i=0; $i<4 ; $i++ )
 		{
-		if ( ($bytes[$i] < 0 ) || $bytes[$i] > 255 || 
+		if ( ($bytes[$i] < 0 ) || $bytes[$i] > 255 ||
 		     (defined($bytes[$i]) && $bytes[$i] !~ /\d+/) )
 			{
 			printf "Illegal byte value %s\n", $bytes[$i];
@@ -288,7 +293,7 @@ sub parse_arg
 		$len = $F[1];
 		}
 	else
-		{	
+		{
 		#  Old version:  user the classful default lengths.
 		#
 		$len = ( $bytes[0] < 128 ) ? 8  : # No explicit length given.
@@ -297,8 +302,8 @@ sub parse_arg
 		#
 		#  *IF* this default causes a CIDR-alignment problem,
 		#    then that's probably not what they wanted.  Try
-		#    8, 16, 24, or 32 based on the number of octets 
-		#    that they supplied when they typed the address.  
+		#    8, 16, 24, or 32 based on the number of octets
+		#    that they supplied when they typed the address.
 		#    E.g.,:
 		#    35   ->  35/8
 		#    35.1 -> 35/16
@@ -309,7 +314,7 @@ sub parse_arg
 		#  ways of using IP notation.
 
 		$mask = &mask_of_len( $len );
-		$len =  (8,16,24,32)[$lowest_explicit_byte] 
+		$len =  (8,16,24,32)[$lowest_explicit_byte]
 						if ( ($mask & $ip) != $ip );
 		#
 		}
@@ -320,8 +325,8 @@ sub parse_arg
 	if ( ( $len > 32 ) || ( $len < 0 ))
 		{
 		print "-" x 78, "\n" ;
-		printf 
-		qq|Error:  "/length" must be between 0 and 32 (not %d).\n|, 
+		printf
+		qq|Error:  "/length" must be between 0 and 32 (not %d).\n|,
 			$len ;
 
 		print "-" x 78, "\n" ;
@@ -346,10 +351,10 @@ sub parse_arg
 
 		for ( $count=0, $bits=$ip ; $bits ; $bits <<= 1 )
 			{ $count++; }
-		
-		printf 
+
+		printf
 		"\n        The largest aggregate (smallest prefix length) " .
-				   "using the\n" . 
+				   "using the\n" .
 			"        prefix \"%s\" is:\n\n" ,
 				&printip( $ip, $len ),
 				&printagg( $ip, $count ) ;
@@ -404,12 +409,12 @@ sub printagg
 	{
 	local($ip, $len) = @_ ;
 
-	return( 
-	    ( $opt_d ) ? sprintf("%s/%d(%s)", 
+	return(
+	    ( $opt_d ) ? sprintf("%s/%d(%s)",
 			&printip($ip,$len),$len,&printip(&mask_of_len($len))) :
-	    ( $opt_D ) ? sprintf("%s/%d(%s)", 
+	    ( $opt_D ) ? sprintf("%s/%d(%s)",
 			&printip($ip,$len),$len,&printip(~ &mask_of_len($len))):
-	                 sprintf("%s/%d", &printip($ip,$len), $len ) 
+	                 sprintf("%s/%d", &printip($ip,$len), $len )
 		) ;
 	}
 
@@ -423,15 +428,15 @@ sub printip
 	$byte2 = ($ip & 0x0000ff00) >>  8 ;
 	$byte3 = ($ip & 0x000000ff) ;
 
-	if ( ($byte3) || $len > 24 || $DOTTED_QUAD ) 
+	if ( ($byte3) || $len > 24 || $DOTTED_QUAD )
 		{ $s=sprintf ("%d.%d.%d.%d", $byte0, $byte1, $byte2, $byte3 );}
-	elsif ( ($byte2) || $len > 16 ) 
+	elsif ( ($byte2) || $len > 16 )
 		{ $s=sprintf ("%d.%d.%d", $byte0, $byte1, $byte2 );}
-	elsif ( ($byte1) || $len > 8 ) 
+	elsif ( ($byte1) || $len > 8 )
 		{ $s=sprintf ("%d.%d", $byte0, $byte1 );}
 	else
 		{ $s=sprintf ("%d", $byte0 );}
-	
+
 	return( $s );
 	}
 
@@ -459,7 +464,7 @@ sub print_part
 
 	#
 	# Try adding blocks of 1, 2, 4... to the start address.
-	# Stop checking (& use the highest previous value) when the 
+	# Stop checking (& use the highest previous value) when the
 	#   end address that gives is beyond the target end address,
 	#   OR when the resulting aggregate no longer starts at the
 	#   start address (e.g. it has bits beyond the masklen).
@@ -472,7 +477,7 @@ sub print_part
 		#
 		#
 		if ( ( $this_end > $end ) ||
-		   ($start != ( $start & $pwr2mask ))) 
+		   ($start != ( $start & $pwr2mask )))
 			{
 			&expand_1_agg( $start, 33-$pwr );
 			return( $start + $pwr2/2 );
@@ -532,8 +537,8 @@ sub expand_1_agg
 		printf "     %16s  (%3d nets:  %s - %s )\n",
 			&printagg( $ip, $len ),
 			$n_nets,
-			&printip( $ip, $std_masklen ), 
-			&printip( $ip + 
+			&printip( $ip, $std_masklen ),
+			&printip( $ip +
 				($one_net * ($n_nets-1)),
 				$std_masklen );
 		}
